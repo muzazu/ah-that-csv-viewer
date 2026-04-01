@@ -41,11 +41,13 @@ export function buildColumns(onEdit: (row: SubscriberRow) => void) {
     helper.accessor("pppoeUsername", {
       header: "PPPoE Username",
       enableSorting: true,
+      filterFn: "fuzzy",
       cell: (info) => <span className="font-mono text-sm">{info.getValue()}</span>
     }),
     helper.accessor("ipAddress", {
       header: "IP Address",
       enableSorting: true,
+      filterFn: "fuzzy",
       cell: (info) => (
         <span className="font-mono text-sm text-muted-foreground">{info.getValue() ?? "—"}</span>
       )
@@ -54,6 +56,7 @@ export function buildColumns(onEdit: (row: SubscriberRow) => void) {
       id: "gponPort",
       header: "GPON Port",
       enableSorting: true,
+      filterFn: "fuzzy",
       cell: (info) => (
         <span className="text-sm text-muted-foreground">{info.getValue() ?? "—"}</span>
       )
@@ -62,6 +65,7 @@ export function buildColumns(onEdit: (row: SubscriberRow) => void) {
       id: "odpPoint",
       header: "ODP Point",
       enableSorting: true,
+      filterFn: "fuzzy",
       cell: (info) => (
         <span className="text-sm text-muted-foreground">{info.getValue() ?? "—"}</span>
       )
@@ -70,6 +74,7 @@ export function buildColumns(onEdit: (row: SubscriberRow) => void) {
       id: "location",
       header: "Location",
       enableSorting: true,
+      filterFn: "fuzzy",
       sortingFn: (a, b) => {
         const aName = a.original.gponPort?.location?.name ?? "";
         const bName = b.original.gponPort?.location?.name ?? "";

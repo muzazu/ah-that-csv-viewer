@@ -6,7 +6,9 @@ import {
   getPaginationRowModel,
   flexRender,
   type SortingState,
-  type PaginationState
+  type PaginationState,
+  type FilterFn,
+  getFilteredRowModel
 } from "@tanstack/react-table";
 import {
   Table,
@@ -24,15 +26,37 @@ import {
   SelectTrigger,
   SelectValue
 } from "#/components/ui/select";
-import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from "lucide-react";
 import { buildColumns, type SubscriberRow } from "./columns";
-
+import { DebouncedInput } from "#/components/ui/input";
+import { rankItem, type RankingInfo } from "@tanstack/match-sorter-utils";
 interface SubscribersTableProps {
   data: SubscriberRow[];
   onEditRow: (row: SubscriberRow) => void;
 }
 
+declare module "@tanstack/react-table" {
+  //add fuzzy filter to the filterFns
+  interface FilterFns {
+    fuzzy: FilterFn<unknown>;
+  }
+  interface FilterMeta {
+    itemRank: RankingInfo;
+  }
+}
+
 const PAGE_SIZES = [25, 50, 100] as const;
+const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+  // Rank the item
+  const itemRank = rankItem(row.getValue(columnId), value);
+  // Store the itemRank info
+  addMeta({
+    itemRank
+  });
+
+  // Return if the item should be filtered in/out
+  return itemRank.passed;
+};
 
 export function SubscribersTable({ data, onEditRow }: SubscribersTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -40,16 +64,23 @@ export function SubscribersTable({ data, onEditRow }: SubscribersTableProps) {
     pageIndex: 0,
     pageSize: 25
   });
+  const [globalFilter, setGlobalFilter] = useState("");
 
   const columns = useMemo(() => buildColumns(onEditRow), [onEditRow]);
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, pagination },
+    filterFns: {
+      fuzzy: fuzzyFilter
+    },
+    state: { sorting, pagination, globalFilter },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: "fuzzy",
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), //client side filtering
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     autoResetPageIndex: true
@@ -63,6 +94,46 @@ export function SubscribersTable({ data, onEditRow }: SubscribersTableProps) {
 
   return (
     <div className="space-y-3">
+      <div className="flex gap-4 items-center">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <DebouncedInput
+            placeholder="Search name, username, IP…"
+            value={globalFilter ?? ""}
+            onChange={(value) => {
+              setGlobalFilter(String(value));
+            }}
+            className="pl-9"
+            autoComplete="off"
+          />
+        </div>
+
+        <Select
+          value={
+            table.getColumn("enabled")?.getFilterValue()
+              ? "true"
+              : table.getColumn("enabled")?.getFilterValue() === false
+                ? "false"
+                : "all"
+          }
+          onValueChange={(event) =>
+            table
+              .getColumn("enabled")
+              ?.setFilterValue(event === "true" ? true : event === "false" ? false : undefined)
+          }
+        >
+          <SelectTrigger className="text-sm">
+            <span className="text-muted-foreground">Status:</span>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={"all"}>All</SelectItem>
+            <SelectItem value={"true"}>Active</SelectItem>
+            <SelectItem value={"false"}>Disabled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="rounded-md border overflow-auto">
         <Table>
           <TableHeader>
