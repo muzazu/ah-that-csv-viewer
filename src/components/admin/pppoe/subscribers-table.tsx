@@ -8,7 +8,8 @@ import {
   type SortingState,
   type PaginationState,
   type FilterFn,
-  getFilteredRowModel
+  getFilteredRowModel,
+  type ColumnFiltersState
 } from "@tanstack/react-table";
 import {
   Table,
@@ -30,15 +31,18 @@ import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from "lucide-react";
 import { buildColumns, type SubscriberRow } from "./columns";
 import { DebouncedInput } from "#/components/ui/input";
 import { rankItem, type RankingInfo } from "@tanstack/match-sorter-utils";
+import { LocationCombobox, type LocationOption } from "./location-combobox";
 interface SubscribersTableProps {
   data: SubscriberRow[];
   onEditRow: (row: SubscriberRow) => void;
+  locations: LocationOption[];
 }
 
 declare module "@tanstack/react-table" {
   //add fuzzy filter to the filterFns
   interface FilterFns {
     fuzzy: FilterFn<unknown>;
+    location: FilterFn<unknown>;
   }
   interface FilterMeta {
     itemRank: RankingInfo;
@@ -49,6 +53,7 @@ const PAGE_SIZES = [25, 50, 100] as const;
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   // Rank the item
   const itemRank = rankItem(row.getValue(columnId), value);
+
   // Store the itemRank info
   addMeta({
     itemRank
@@ -58,13 +63,30 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed;
 };
 
-export function SubscribersTable({ data, onEditRow }: SubscribersTableProps) {
+const locationFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+  // Rank the item
+  const rowValue = row.getValue(columnId);
+  const rowLocationName =
+    typeof rowValue === "object" && rowValue !== null ? (rowValue as LocationOption).name : "";
+  const itemRank = rankItem(rowLocationName, value.name, { threshold: 7 });
+
+  // Store the ranking info
+  addMeta({
+    itemRank
+  });
+
+  // Return if the item should be filtered in/out
+  return itemRank.passed;
+};
+
+export function SubscribersTable({ data, onEditRow, locations }: SubscribersTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25
   });
   const [globalFilter, setGlobalFilter] = useState("");
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const columns = useMemo(() => buildColumns(onEditRow), [onEditRow]);
 
@@ -72,9 +94,16 @@ export function SubscribersTable({ data, onEditRow }: SubscribersTableProps) {
     data,
     columns,
     filterFns: {
-      fuzzy: fuzzyFilter
+      fuzzy: fuzzyFilter,
+      location: locationFilter
     },
-    state: { sorting, pagination, globalFilter },
+    state: {
+      sorting,
+      pagination,
+      globalFilter,
+      columnFilters
+    },
+    onColumnFiltersChange: setColumnFilters,
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onGlobalFilterChange: setGlobalFilter,
@@ -132,6 +161,14 @@ export function SubscribersTable({ data, onEditRow }: SubscribersTableProps) {
             <SelectItem value={"false"}>Disabled</SelectItem>
           </SelectContent>
         </Select>
+
+        {locations.length > 0 && (
+          <LocationCombobox
+            value={(table.getColumn("location")?.getFilterValue() as LocationOption) ?? null}
+            onValueChange={(value) => table.getColumn("location")?.setFilterValue(value)}
+            locations={locations}
+          />
+        )}
       </div>
 
       <div className="rounded-md border overflow-auto">

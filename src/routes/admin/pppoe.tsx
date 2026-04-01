@@ -40,7 +40,7 @@ function PPPoEPage() {
         </Button>
       </div>
 
-      <SubscribersTable data={rows} onEditRow={setEditingRow} />
+      <SubscribersTable data={rows} onEditRow={setEditingRow} locations={locations} />
 
       <EditSubscriberDialog
         subscriber={editingRow}

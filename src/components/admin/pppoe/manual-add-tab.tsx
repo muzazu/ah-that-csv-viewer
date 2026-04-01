@@ -1,18 +1,18 @@
 import { useState } from "react";
-import type { ChangeEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Input } from "#/components/ui/input";
-import { Label } from "#/components/ui/label";
 import { Button } from "#/components/ui/button";
 import { LocationCombobox } from "./location-combobox";
 import type { LocationOption } from "./location-combobox";
 import type { SubscriberImportRow } from "#/lib/schemas";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import { Field, FieldError, FieldGroup, FieldLabel } from "#/components/ui/field";
 
 interface ManualForm {
   name: string;
   pppoeUsername: string;
-  location: string;
+  location: LocationOption | null;
   gponPort: string;
   odpPoint: string;
   ipAddress: string;
@@ -23,7 +23,7 @@ interface ManualForm {
 const EMPTY_FORM: ManualForm = {
   name: "",
   pppoeUsername: "",
-  location: "",
+  location: { id: -1, name: "", type: "OLT" },
   gponPort: "",
   odpPoint: "",
   ipAddress: "",
@@ -39,30 +39,30 @@ export function ManualAddTab({
   locations: LocationOption[];
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<ManualForm>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
-  function setField(field: keyof ManualForm) {
-    return (e: ChangeEvent<HTMLInputElement>) =>
-      setForm((prev) => ({ ...prev, [field]: e.target.value }));
-  }
+  const { control, handleSubmit, reset } = useForm<ManualForm>({
+    defaultValues: EMPTY_FORM
+  });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.name.trim() || !form.pppoeUsername.trim()) return;
+  const watchedName = useWatch({ control, name: "name" });
+  const watchedPppoe = useWatch({ control, name: "pppoeUsername" });
+
+  async function onSubmit(values: ManualForm) {
+    if (!values.name.trim() || !values.pppoeUsername.trim()) return;
     setSubmitting(true);
     setResult(null);
 
     const row: SubscriberImportRow = {
-      name: form.name.trim(),
-      pppoeUsername: form.pppoeUsername.trim(),
-      location: form.location.trim() || undefined,
-      gponPort: form.gponPort.trim() || undefined,
-      odpPoint: form.odpPoint.trim() || undefined,
-      ipAddress: form.ipAddress.trim() || undefined,
-      serialNumber: form.serialNumber.trim() || undefined,
-      notes: form.notes.trim() || undefined
+      name: values.name.trim(),
+      pppoeUsername: values.pppoeUsername.trim(),
+      location: values.location?.name?.trim() || undefined,
+      gponPort: values.gponPort.trim() || undefined,
+      odpPoint: values.odpPoint.trim() || undefined,
+      ipAddress: values.ipAddress.trim() || undefined,
+      serialNumber: values.serialNumber.trim() || undefined,
+      notes: values.notes.trim() || undefined
     };
 
     try {
@@ -82,92 +82,131 @@ export function ManualAddTab({
         setResult({ ok: false, message: data.errors[0]!.message });
       } else {
         setResult({ ok: true, message: "Subscriber saved successfully." });
-        setForm(EMPTY_FORM);
-        // Refresh the table in the background without closing the sheet
+        reset();
         void router.invalidate();
       }
     } catch (err) {
-      setResult({
-        ok: false,
-        message: err instanceof Error ? err.message : "Network error"
-      });
+      setResult({ ok: false, message: err instanceof Error ? err.message : "Network error" });
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="m-name">
-            Name <span className="text-destructive">*</span>
-          </Label>
-          <Input id="m-name" value={form.name} onChange={setField("name")} required />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="m-pppoe">
-            PPPoE Username <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="m-pppoe"
-            value={form.pppoeUsername}
-            onChange={setField("pppoeUsername")}
-            className="font-mono"
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Location</Label>
-          <LocationCombobox
-            value={form.location}
-            onValueChange={(v) => setForm((prev) => ({ ...prev, location: v }))}
-            locations={locations}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="m-gpon">GPON Port</Label>
-          <Input
-            id="m-gpon"
-            value={form.gponPort}
-            onChange={setField("gponPort")}
-            placeholder="e.g. 1/2/1:61"
-            className="font-mono"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="m-odp">ODP Point</Label>
-          <Input
-            id="m-odp"
-            value={form.odpPoint}
-            onChange={setField("odpPoint")}
-            placeholder="e.g. ODP 1 Depan Kantor"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="m-ip">IP Address</Label>
-          <Input
-            id="m-ip"
-            value={form.ipAddress}
-            onChange={setField("ipAddress")}
-            placeholder="e.g. 10.77.77.21"
-            className="font-mono"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="m-sn">Serial Number</Label>
-          <Input
-            id="m-sn"
-            value={form.serialNumber}
-            onChange={setField("serialNumber")}
-            className="font-mono"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="m-notes">Notes</Label>
-          <Input id="m-notes" value={form.notes} onChange={setField("notes")} />
-        </div>
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <FieldGroup className="grid grid-cols-2 gap-4">
+        <Controller
+          control={control}
+          name="name"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="m-name">
+                Name <span className="text-destructive">*</span>
+              </FieldLabel>
+              <Input {...field} id="m-name" />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+        <Controller
+          control={control}
+          name="pppoeUsername"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="m-pppoe">
+                PPPoE Username <span className="text-destructive">*</span>
+              </FieldLabel>
+              <Input
+                {...field}
+                id="m-pppoe"
+                aria-invalid={fieldState.invalid}
+                className="font-mono"
+                required
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="location"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel>Location</FieldLabel>
+              <LocationCombobox
+                value={field.value}
+                onValueChange={(v) => {
+                  field.onChange(v ?? { id: -1, name: "", type: "OLT" });
+                }}
+                locations={locations}
+                allowAddNew
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="gponPort"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="m-gpon">GPON Port</FieldLabel>
+              <Input {...field} id="m-gpon" placeholder="e.g. 1/2/1:61" className="font-mono" />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="odpPoint"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="m-odp">ODP Point</FieldLabel>
+              <Input {...field} id="m-odp" placeholder="e.g. ODP 1 Depan Kantor" />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="ipAddress"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="m-ip">IP Address</FieldLabel>
+              <Input {...field} id="m-ip" placeholder="e.g. 10.77.77.21" className="font-mono" />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="serialNumber"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="m-sn">Serial Number</FieldLabel>
+              <Input {...field} id="m-sn" className="font-mono" />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="m-notes">Notes</FieldLabel>
+              <Input {...field} id="m-notes" />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+      </FieldGroup>
 
       {result && (
         <div
@@ -189,7 +228,7 @@ export function ManualAddTab({
       <div className="flex gap-2 pt-1">
         <Button
           type="submit"
-          disabled={submitting || !form.name.trim() || !form.pppoeUsername.trim()}
+          disabled={submitting || !watchedName?.trim() || !watchedPppoe?.trim()}
         >
           {submitting ? "Saving…" : "Add Subscriber"}
         </Button>

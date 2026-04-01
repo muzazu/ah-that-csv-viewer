@@ -74,7 +74,7 @@ export function buildColumns(onEdit: (row: SubscriberRow) => void) {
       id: "location",
       header: "Location",
       enableSorting: true,
-      filterFn: "fuzzy",
+      filterFn: "location",
       sortingFn: (a, b) => {
         const aName = a.original.gponPort?.location?.name ?? "";
         const bName = b.original.gponPort?.location?.name ?? "";
@@ -92,7 +92,8 @@ export function buildColumns(onEdit: (row: SubscriberRow) => void) {
             {loc.name}
           </Link>
         );
-      }
+      },
+      enableColumnFilter: true
     }),
     helper.accessor("enabled", {
       header: "Status",
