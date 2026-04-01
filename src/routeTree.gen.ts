@@ -17,9 +17,12 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout.index'
 import { Route as ApiSetupRouteImport } from './routes/api/setup'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminPppoeRouteImport } from './routes/admin/pppoe'
-import { Route as AdminLocationsRouteImport } from './routes/admin/locations'
+import { Route as AdminLocationsIndexRouteImport } from './routes/admin/locations/index'
 import { Route as ApiUploadLogoRouteImport } from './routes/api/upload/logo'
+import { Route as ApiPppoeUpdateRouteImport } from './routes/api/pppoe/update'
+import { Route as ApiPppoeImportRouteImport } from './routes/api/pppoe/import'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminLocationsIdRouteImport } from './routes/admin/locations/$id'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -60,9 +63,9 @@ const AdminPppoeRoute = AdminPppoeRouteImport.update({
   path: '/pppoe',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminLocationsRoute = AdminLocationsRouteImport.update({
-  id: '/locations',
-  path: '/locations',
+const AdminLocationsIndexRoute = AdminLocationsIndexRouteImport.update({
+  id: '/locations/',
+  path: '/locations/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const ApiUploadLogoRoute = ApiUploadLogoRouteImport.update({
@@ -70,48 +73,72 @@ const ApiUploadLogoRoute = ApiUploadLogoRouteImport.update({
   path: '/api/upload/logo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPppoeUpdateRoute = ApiPppoeUpdateRouteImport.update({
+  id: '/api/pppoe/update',
+  path: '/api/pppoe/update',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPppoeImportRoute = ApiPppoeImportRouteImport.update({
+  id: '/api/pppoe/import',
+  path: '/api/pppoe/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLocationsIdRoute = AdminLocationsIdRouteImport.update({
+  id: '/locations/$id',
+  path: '/locations/$id',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/': typeof LayoutIndexRoute
   '/setup': typeof SetupRoute
-  '/admin/locations': typeof AdminLocationsRoute
   '/admin/pppoe': typeof AdminPppoeRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/setup': typeof ApiSetupRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/locations/$id': typeof AdminLocationsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/pppoe/import': typeof ApiPppoeImportRoute
+  '/api/pppoe/update': typeof ApiPppoeUpdateRoute
   '/api/upload/logo': typeof ApiUploadLogoRoute
+  '/admin/locations/': typeof AdminLocationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
-  '/admin/locations': typeof AdminLocationsRoute
   '/admin/pppoe': typeof AdminPppoeRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/setup': typeof ApiSetupRoute
   '/': typeof LayoutIndexRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/locations/$id': typeof AdminLocationsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/pppoe/import': typeof ApiPppoeImportRoute
+  '/api/pppoe/update': typeof ApiPppoeUpdateRoute
   '/api/upload/logo': typeof ApiUploadLogoRoute
+  '/admin/locations': typeof AdminLocationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/admin': typeof AdminRouteRouteWithChildren
   '/_layout': typeof LayoutRouteWithChildren
   '/setup': typeof SetupRoute
-  '/admin/locations': typeof AdminLocationsRoute
   '/admin/pppoe': typeof AdminPppoeRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/setup': typeof ApiSetupRoute
   '/_layout/': typeof LayoutIndexRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/locations/$id': typeof AdminLocationsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/pppoe/import': typeof ApiPppoeImportRoute
+  '/api/pppoe/update': typeof ApiPppoeUpdateRoute
   '/api/upload/logo': typeof ApiUploadLogoRoute
+  '/admin/locations/': typeof AdminLocationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,37 +146,46 @@ export interface FileRouteTypes {
     | '/admin'
     | '/'
     | '/setup'
-    | '/admin/locations'
     | '/admin/pppoe'
     | '/admin/users'
     | '/api/setup'
     | '/admin/'
+    | '/admin/locations/$id'
     | '/api/auth/$'
+    | '/api/pppoe/import'
+    | '/api/pppoe/update'
     | '/api/upload/logo'
+    | '/admin/locations/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/setup'
-    | '/admin/locations'
     | '/admin/pppoe'
     | '/admin/users'
     | '/api/setup'
     | '/'
     | '/admin'
+    | '/admin/locations/$id'
     | '/api/auth/$'
+    | '/api/pppoe/import'
+    | '/api/pppoe/update'
     | '/api/upload/logo'
+    | '/admin/locations'
   id:
     | '__root__'
     | '/admin'
     | '/_layout'
     | '/setup'
-    | '/admin/locations'
     | '/admin/pppoe'
     | '/admin/users'
     | '/api/setup'
     | '/_layout/'
     | '/admin/'
+    | '/admin/locations/$id'
     | '/api/auth/$'
+    | '/api/pppoe/import'
+    | '/api/pppoe/update'
     | '/api/upload/logo'
+    | '/admin/locations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +194,8 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   ApiSetupRoute: typeof ApiSetupRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiPppoeImportRoute: typeof ApiPppoeImportRoute
+  ApiPppoeUpdateRoute: typeof ApiPppoeUpdateRoute
   ApiUploadLogoRoute: typeof ApiUploadLogoRoute
 }
 
@@ -219,11 +257,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPppoeRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/locations': {
-      id: '/admin/locations'
+    '/admin/locations/': {
+      id: '/admin/locations/'
       path: '/locations'
-      fullPath: '/admin/locations'
-      preLoaderRoute: typeof AdminLocationsRouteImport
+      fullPath: '/admin/locations/'
+      preLoaderRoute: typeof AdminLocationsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/api/upload/logo': {
@@ -233,6 +271,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadLogoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pppoe/update': {
+      id: '/api/pppoe/update'
+      path: '/api/pppoe/update'
+      fullPath: '/api/pppoe/update'
+      preLoaderRoute: typeof ApiPppoeUpdateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pppoe/import': {
+      id: '/api/pppoe/import'
+      path: '/api/pppoe/import'
+      fullPath: '/api/pppoe/import'
+      preLoaderRoute: typeof ApiPppoeImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -240,21 +292,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/locations/$id': {
+      id: '/admin/locations/$id'
+      path: '/locations/$id'
+      fullPath: '/admin/locations/$id'
+      preLoaderRoute: typeof AdminLocationsIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
 interface AdminRouteRouteChildren {
-  AdminLocationsRoute: typeof AdminLocationsRoute
   AdminPppoeRoute: typeof AdminPppoeRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminLocationsIdRoute: typeof AdminLocationsIdRoute
+  AdminLocationsIndexRoute: typeof AdminLocationsIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
-  AdminLocationsRoute: AdminLocationsRoute,
   AdminPppoeRoute: AdminPppoeRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminLocationsIdRoute: AdminLocationsIdRoute,
+  AdminLocationsIndexRoute: AdminLocationsIndexRoute,
 }
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
@@ -278,6 +339,8 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   ApiSetupRoute: ApiSetupRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiPppoeImportRoute: ApiPppoeImportRoute,
+  ApiPppoeUpdateRoute: ApiPppoeUpdateRoute,
   ApiUploadLogoRoute: ApiUploadLogoRoute,
 }
 export const routeTree = rootRouteImport

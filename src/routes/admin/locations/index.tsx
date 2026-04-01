@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "#/components/ui/select";
-import { MoreHorizontal, Plus, Loader2, Trash2, Pencil } from "lucide-react";
+import { MoreHorizontal, Plus, Loader2, Trash2, Pencil, Search, AlertTriangle } from "lucide-react";
 
 const updateLocationInputSchema = z.object({
   id: z.number().int().positive(),
@@ -49,6 +49,10 @@ const updateLocationInputSchema = z.object({
 });
 
 const deleteLocationInputSchema = z.object({
+  id: z.number().int().positive()
+});
+
+const checkLocationInUseInputSchema = z.object({
   id: z.number().int().positive()
 });
 
@@ -103,27 +107,90 @@ const removeLocation = createServerFn({ method: "POST" })
     await db.delete(locations).where(eq(locations.id, data.id));
   });
 
+const checkLocationInUse = createServerFn({ method: "GET" })
+  .inputValidator(checkLocationInUseInputSchema)
+  .handler(async ({ data }) => {
+    const [{ db }, { subscribers, gponPorts, odpPoints }, { inArray, or, eq }] = await Promise.all([
+      import("#/db"),
+      import("#/db/schema"),
+      import("drizzle-orm")
+    ]);
+
+    const [portRows, odpRows] = await Promise.all([
+      db
+        .select({ id: gponPorts.id })
+        .from(gponPorts)
+        .where(eq(gponPorts.locationId, data.id))
+        .all(),
+      db.select({ id: odpPoints.id }).from(odpPoints).where(eq(odpPoints.locationId, data.id)).all()
+    ]);
+
+    const portIds = portRows.map((r) => r.id);
+    const odpIds = odpRows.map((r) => r.id);
+
+    if (portIds.length === 0 && odpIds.length === 0) return { count: 0 };
+
+    const conditions = [
+      portIds.length > 0 ? inArray(subscribers.gponPortId, portIds) : undefined,
+      odpIds.length > 0 ? inArray(subscribers.odpPointId, odpIds) : undefined
+    ].filter(Boolean) as Parameters<typeof or>;
+
+    const count = await db.$count(subscribers, or(...conditions));
+    return { count };
+  });
+
 type Location = Awaited<ReturnType<typeof getLocations>>[number];
 
-export const Route = createFileRoute("/admin/locations")({
+export const Route = createFileRoute("/admin/locations/")({
   loader: async (): Promise<{ rows: Location[] }> => ({ rows: await getLocations() }),
   component: LocationsPage
 });
 
+const PAGE_SIZE = 20;
+
 function LocationsPage() {
   const fetchLocations = useServerFn(getLocations);
+  const checkUsageFn = useServerFn(checkLocationInUse);
   const createLocationMutation = useServerFn(createLocation);
   const updateLocationMutation = useServerFn(updateLocation);
   const deleteLocationMutation = useServerFn(removeLocation);
   const { rows: initialRows } = Route.useLoaderData();
   const [rows, setRows] = useState(initialRows);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [editLocation, setEditLocation] = useState<Location | null>(null);
   const [deleteLocation, setDeleteLocation] = useState<Location | null>(null);
+  const [deleteUsageCount, setDeleteUsageCount] = useState<number | null>(null);
+  const [checkingUsage, setCheckingUsage] = useState(false);
 
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
+
+  // Reset to page 0 when search changes
+  useEffect(() => {
+    setPage(0);
+  }, [search]);
+
+  const filteredRows = search.trim()
+    ? rows.filter((r) => r.name.toLowerCase().includes(search.toLowerCase().trim()))
+    : rows;
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const pagedRows = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  async function handleDeleteClick(loc: Location) {
+    setDeleteLocation(loc);
+    setDeleteUsageCount(null);
+    setCheckingUsage(true);
+    try {
+      const result = await checkUsageFn({ data: { id: loc.id } });
+      setDeleteUsageCount(result.count);
+    } finally {
+      setCheckingUsage(false);
+    }
+  }
 
   const createMutation = useMutation({
     mutationFn: async (data: LocationValues) => {
@@ -152,6 +219,7 @@ function LocationsPage() {
     onSuccess: async () => {
       setRows(await fetchLocations());
       setDeleteLocation(null);
+      setDeleteUsageCount(null);
     }
   });
 
@@ -167,6 +235,17 @@ function LocationsPage() {
         </Button>
       </div>
 
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Filter by name…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -179,16 +258,20 @@ function LocationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {pagedRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                  No locations yet.
+                  {search ? "No locations match your search." : "No locations yet."}
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((loc) => (
+              pagedRows.map((loc) => (
                 <TableRow key={loc.id}>
-                  <TableCell className="font-medium">{loc.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link to={`/admin/locations/$id`} params={{ id: loc.id.toString() }}>
+                      {loc.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{loc.type}</Badge>
                   </TableCell>
@@ -212,7 +295,7 @@ function LocationsPage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
-                          onClick={() => setDeleteLocation(loc)}
+                          onClick={() => void handleDeleteClick(loc)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
@@ -225,6 +308,37 @@ function LocationsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredRows.length)} of{" "}
+            {filteredRows.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page === 0}
+            >
+              Previous
+            </Button>
+            <span>
+              Page {page + 1} of {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= pageCount - 1}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <LocationFormDialog
         open={showCreate}
@@ -250,8 +364,16 @@ function LocationsPage() {
       )}
 
       {deleteLocation && (
-        <Dialog open={true} onOpenChange={(open) => !open && setDeleteLocation(null)}>
-          <DialogContent className="sm:max-w-[360px]">
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteLocation(null);
+              setDeleteUsageCount(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-[400px]">
             <DialogHeader>
               <DialogTitle>Delete Location</DialogTitle>
               <DialogDescription>
@@ -259,14 +381,41 @@ function LocationsPage() {
                 be undone.
               </DialogDescription>
             </DialogHeader>
+
+            {/* Usage warning */}
+            {checkingUsage && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Checking usage…
+              </div>
+            )}
+            {!checkingUsage && deleteUsageCount !== null && deleteUsageCount > 0 && (
+              <div className="flex gap-2 rounded-md border border-yellow-400 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-300">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  This location is linked to{" "}
+                  <strong>
+                    {deleteUsageCount} subscriber{deleteUsageCount !== 1 ? "s" : ""}
+                  </strong>
+                  . Deleting it will unlink those subscribers from this location.
+                </span>
+              </div>
+            )}
+
             <DialogFooter className="pt-2">
-              <Button variant="outline" onClick={() => setDeleteLocation(null)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteLocation(null);
+                  setDeleteUsageCount(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => deleteMutation.mutate(deleteLocation.id)}
-                disabled={deleteMutation.isPending}
+                disabled={deleteMutation.isPending || checkingUsage}
               >
                 {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
               </Button>

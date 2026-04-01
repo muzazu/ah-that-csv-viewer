@@ -1,55 +1,75 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "#/components/ui/table";
-import { Badge } from "#/components/ui/badge";
+import { Search, Upload } from "lucide-react";
 import { Input } from "#/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "#/components/ui/button";
+import { SubscribersTable } from "#/components/admin/pppoe/subscribers-table";
+import { EditSubscriberDialog } from "#/components/admin/pppoe/edit-subscriber-dialog";
+import { ImportSheet } from "#/components/admin/pppoe/import-sheet";
+import type { SubscriberRow } from "#/components/admin/pppoe/columns";
+
+// ─── Server fn ───────────────────────────────────────────────────────────────
 
 const getSubscribers = createServerFn({ method: "GET" }).handler(async () => {
-  const [{ db }] = await Promise.all([import("#/db")]);
-
+  const { db } = await import("#/db");
   return db.query.subscribers.findMany({
-    with: {
-      gponPort: true,
-      odpPoint: true
-    },
-    limit: 500
+    with: { gponPort: { with: { location: true } }, odpPoint: true },
+    limit: 2000
   });
 });
 
-type SubscriberRow = Awaited<ReturnType<typeof getSubscribers>>[number];
+const getLocations = createServerFn({ method: "GET" }).handler(async () => {
+  const { db } = await import("#/db");
+  const { locations } = await import("#/db/schema");
+  return db
+    .select({ id: locations.id, name: locations.name, type: locations.type })
+    .from(locations)
+    .all();
+});
 
 export const Route = createFileRoute("/admin/pppoe")({
-  loader: async (): Promise<{ rows: SubscriberRow[] }> => ({ rows: await getSubscribers() }),
+  loader: async () => ({
+    rows: await getSubscribers(),
+    locations: await getLocations()
+  }),
   component: PPPoEPage
 });
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 function PPPoEPage() {
-  const { rows } = Route.useLoaderData();
+  const { rows, locations } = Route.useLoaderData();
+  const router = useRouter();
   const [search, setSearch] = useState("");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<SubscriberRow | null>(null);
 
   const filtered = search.trim()
-    ? rows.filter(
+    ? (rows as SubscriberRow[]).filter(
         (r) =>
           r.name.toLowerCase().includes(search.toLowerCase()) ||
           r.pppoeUsername.toLowerCase().includes(search.toLowerCase()) ||
           (r.ipAddress ?? "").includes(search)
       )
-    : rows;
+    : (rows as SubscriberRow[]);
+
+  function handleImportDone() {
+    setSheetOpen(false);
+    void router.invalidate();
+  }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">PPPoE Subscribers</h1>
-        <p className="text-muted-foreground">{rows.length} total subscribers</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">PPPoE Subscribers</h1>
+          <p className="text-muted-foreground">{rows.length} total subscribers</p>
+        </div>
+        <Button onClick={() => setSheetOpen(true)} className="shrink-0">
+          <Upload className="mr-2 h-4 w-4" />
+          Import
+        </Button>
       </div>
 
       <div className="relative max-w-sm">
@@ -62,50 +82,23 @@ function PPPoEPage() {
         />
       </div>
 
-      <div className="rounded-md border overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>PPPoE Username</TableHead>
-              <TableHead>IP Address</TableHead>
-              <TableHead>GPON Port</TableHead>
-              <TableHead>ODP Point</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                  {search ? "No results found." : "No subscribers yet."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.name}</TableCell>
-                  <TableCell className="font-mono text-sm">{row.pppoeUsername}</TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {row.ipAddress ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {row.gponPort?.portIdentifier ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {row.odpPoint?.name ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={row.enabled ? "default" : "secondary"}>
-                      {row.enabled ? "Active" : "Disabled"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <SubscribersTable data={filtered} onEditRow={setEditingRow} />
+
+      <EditSubscriberDialog
+        subscriber={editingRow}
+        open={editingRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingRow(null);
+        }}
+        locations={locations}
+      />
+
+      <ImportSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onDone={handleImportDone}
+        locations={locations}
+      />
     </div>
   );
 }

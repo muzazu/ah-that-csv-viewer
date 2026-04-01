@@ -6,6 +6,14 @@ import { authClient } from "#/lib/auth-client";
 import { getStoredAppSettings } from "#/lib/app-settings";
 
 export const Route = createFileRoute("/admin")({
+  beforeLoad: async () => {
+    // session check to redirect authenticated users away from the login page
+    const session = await authClient.getSession();
+
+    if (!session.data?.user) {
+      throw redirect({ to: "/" });
+    }
+  },
   loader: async () => {
     const data = await getStoredAppSettings();
 
@@ -15,20 +23,12 @@ export const Route = createFileRoute("/admin")({
 
     return data;
   },
-  component: AdminLayout
+  component: AdminLayout,
+  ssr: false
 });
 
 function AdminLayout() {
-  const { data: session, isPending } = authClient.useSession();
   const { appName, logoPath } = Route.useLoaderData();
-
-  // Client-side auth guard
-  if (!isPending && !session?.user) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/";
-    }
-    return null;
-  }
 
   return (
     <SidebarProvider>

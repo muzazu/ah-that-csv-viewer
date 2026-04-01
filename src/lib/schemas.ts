@@ -65,3 +65,27 @@ export const locationSchema = z.object({
   notes: z.string().optional()
 });
 export type LocationValues = z.infer<typeof locationSchema>;
+
+// ---------------------------------------------------------------------------
+// PPPoE bulk import
+// ---------------------------------------------------------------------------
+export const subscriberImportRowSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  pppoeUsername: z.string().min(1, "PPPoE username is required"),
+  location: z.string().optional(),
+  gponPort: z.string().optional(),
+  odpPoint: z.string().optional(),
+  ipAddress: z.string().optional(),
+  serialNumber: z.string().optional(),
+  sn2: z.string().optional(),
+  sn3: z.string().optional(),
+  notes: z.string().optional()
+});
+export type SubscriberImportRow = z.infer<typeof subscriberImportRowSchema>;
+
+export const importChunkSchema = z.object({
+  rows: z.array(subscriberImportRowSchema).min(1),
+  chunkIndex: z.number().int().min(0),
+  totalChunks: z.number().int().min(1)
+});
+export type ImportChunk = z.infer<typeof importChunkSchema>;
