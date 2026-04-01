@@ -9,6 +9,7 @@ import type {
   GponPortCache,
   OdpPointCache
 } from "#/lib/subscriber-helpers";
+import { ensureSession } from "#/servers/auth";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/api/pppoe/import")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        await ensureSession();
+
         let body: unknown;
         try {
           body = await request.json();

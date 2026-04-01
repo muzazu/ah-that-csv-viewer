@@ -1,3 +1,4 @@
+import { ensureSession } from "#/servers/auth";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/api/pppoe/update")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        await ensureSession();
         let body: unknown;
         try {
           body = await request.json();
