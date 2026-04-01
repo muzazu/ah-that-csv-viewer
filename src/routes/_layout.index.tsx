@@ -128,11 +128,11 @@ function LoginPage() {
 
               {errors.root && (
                 <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-                  {errors.root.message}
+                  Invalid username or password. Please try again.
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" className="w-full mt-8" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…

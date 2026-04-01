@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
-export const DEFAULT_APP_NAME = "CSV Viewer";
-export const DEFAULT_FAVICON_PATH = "/favicon.ico";
+export const DEFAULT_APP_NAME = "APP";
+export const DEFAULT_FAVICON_PATH = "/logo.png";
 
 export type StoredAppSettings = {
   setupCompleted: boolean;
