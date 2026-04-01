@@ -1,4 +1,4 @@
-import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { TooltipProvider } from "../components/ui/tooltip";
@@ -49,6 +49,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-bold">404 - Not Found</h1>
       <p className="text-muted-foreground">The page you are looking for does not exist.</p>
+      <Link
+        to="/"
+        className="text-sm font-extrabold bg-linear-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent underline"
+      >
+        Go back home
+      </Link>
     </div>
   )
 });
