@@ -6,7 +6,11 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from "../styles.css?url";
-import { DEFAULT_APP_NAME, DEFAULT_FAVICON_PATH, getStoredAppSettings } from "#/lib/app-settings";
+import {
+  DEFAULT_APP_NAME,
+  DEFAULT_FAVICON_PATH,
+  getStoredAppSettings
+} from "#/servers/app-settings";
 
 import type { QueryClient } from "@tanstack/react-query";
 

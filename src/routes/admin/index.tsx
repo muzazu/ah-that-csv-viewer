@@ -1,32 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Users, Network, MapPin, Activity } from "lucide-react";
-
-const getDashboardStats = createServerFn({ method: "GET" }).handler(async () => {
-  const [{ db }, { subscribers, locations, appSettings }, { sql }] = await Promise.all([
-    import("#/db"),
-    import("#/db/schema"),
-    import("drizzle-orm")
-  ]);
-
-  const [subscriberCount] = await db.select({ count: sql<number>`count(*)` }).from(subscribers);
-  const [locationCount] = await db.select({ count: sql<number>`count(*)` }).from(locations);
-  const [activeCount] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(subscribers)
-    .where(sql`enabled = 1`);
-  const settings = await db.select().from(appSettings).limit(1);
-  const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(sql`"user"` as any);
-
-  return {
-    subscriberCount: Number(subscriberCount?.count ?? 0),
-    locationCount: Number(locationCount?.count ?? 0),
-    activeCount: Number(activeCount?.count ?? 0),
-    userCount: Number(userCount?.count ?? 0),
-    appName: settings[0]?.appName ?? "My App"
-  };
-});
+import { getDashboardStats } from "@/servers/dashboard-stats";
 
 export const Route = createFileRoute("/admin/")({
   loader: () => getDashboardStats(),

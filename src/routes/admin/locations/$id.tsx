@@ -1,10 +1,9 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
-import { createServerFn, useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { z } from "zod";
 import { locationSchema, type LocationValues } from "#/lib/schemas";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
@@ -21,52 +20,7 @@ import {
 } from "#/components/ui/select";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Card, CardContent } from "#/components/ui/card";
-
-// ─── Server fns ───────────────────────────────────────────────────────────────
-
-const getLocationDetail = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ id: z.number().int().positive() }))
-  .handler(async ({ data }) => {
-    const [{ db }, { locations }, { eq }] = await Promise.all([
-      import("#/db"),
-      import("#/db/schema"),
-      import("drizzle-orm")
-    ]);
-
-    const location = await db.query.locations.findFirst({
-      where: eq(locations.id, data.id),
-      with: { gponPorts: true, odpPoints: true }
-    });
-
-    if (!location) throw notFound();
-    return location;
-  });
-
-const updateLocationDetail = createServerFn({ method: "POST" })
-  .inputValidator(
-    z.object({
-      id: z.number().int().positive(),
-      data: locationSchema
-    })
-  )
-  .handler(async ({ data }) => {
-    const [{ db }, { locations }, { eq }] = await Promise.all([
-      import("#/db"),
-      import("#/db/schema"),
-      import("drizzle-orm")
-    ]);
-
-    await db
-      .update(locations)
-      .set({
-        name: data.data.name,
-        type: data.data.type,
-        address: data.data.address || null,
-        notes: data.data.notes || null,
-        updatedAt: new Date().toISOString()
-      })
-      .where(eq(locations.id, data.id));
-  });
+import { getLocationDetail, updateLocationDetail } from "#/servers/locations";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +28,11 @@ export const Route = createFileRoute("/admin/locations/$id")({
   loader: async ({ params }) => {
     const id = parseInt(params.id, 10);
     if (isNaN(id) || id <= 0) throw notFound();
-    return getLocationDetail({ data: { id } });
+    const req = await getLocationDetail({ data: { id } });
+
+    if (!req) throw notFound();
+
+    return req;
   },
   component: LocationDetailPage
 });

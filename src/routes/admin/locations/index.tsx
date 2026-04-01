@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { createServerFn, useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { locationSchema, type LocationValues } from "#/lib/schemas";
-import { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
@@ -43,101 +42,13 @@ import {
 } from "#/components/ui/select";
 import { MoreHorizontal, Plus, Loader2, Trash2, Pencil, Search, AlertTriangle } from "lucide-react";
 
-const updateLocationInputSchema = z.object({
-  id: z.number().int().positive(),
-  data: locationSchema
-});
-
-const deleteLocationInputSchema = z.object({
-  id: z.number().int().positive()
-});
-
-const checkLocationInUseInputSchema = z.object({
-  id: z.number().int().positive()
-});
-
-const getLocations = createServerFn({ method: "GET" }).handler(async () => {
-  const [{ db }, { locations }] = await Promise.all([import("#/db"), import("#/db/schema")]);
-  return db.select().from(locations).orderBy(locations.name);
-});
-
-const createLocation = createServerFn({ method: "POST" })
-  .inputValidator(locationSchema)
-  .handler(async ({ data }) => {
-    const [{ db }, { locations }] = await Promise.all([import("#/db"), import("#/db/schema")]);
-
-    await db.insert(locations).values({
-      name: data.name,
-      type: data.type,
-      address: data.address || null,
-      notes: data.notes || null
-    });
-  });
-
-const updateLocation = createServerFn({ method: "POST" })
-  .inputValidator(updateLocationInputSchema)
-  .handler(async ({ data }) => {
-    const [{ db }, { locations }, { eq }] = await Promise.all([
-      import("#/db"),
-      import("#/db/schema"),
-      import("drizzle-orm")
-    ]);
-
-    await db
-      .update(locations)
-      .set({
-        name: data.data.name,
-        type: data.data.type,
-        address: data.data.address || null,
-        notes: data.data.notes || null,
-        updatedAt: new Date().toISOString()
-      })
-      .where(eq(locations.id, data.id));
-  });
-
-const removeLocation = createServerFn({ method: "POST" })
-  .inputValidator(deleteLocationInputSchema)
-  .handler(async ({ data }) => {
-    const [{ db }, { locations }, { eq }] = await Promise.all([
-      import("#/db"),
-      import("#/db/schema"),
-      import("drizzle-orm")
-    ]);
-
-    await db.delete(locations).where(eq(locations.id, data.id));
-  });
-
-const checkLocationInUse = createServerFn({ method: "GET" })
-  .inputValidator(checkLocationInUseInputSchema)
-  .handler(async ({ data }) => {
-    const [{ db }, { subscribers, gponPorts, odpPoints }, { inArray, or, eq }] = await Promise.all([
-      import("#/db"),
-      import("#/db/schema"),
-      import("drizzle-orm")
-    ]);
-
-    const [portRows, odpRows] = await Promise.all([
-      db
-        .select({ id: gponPorts.id })
-        .from(gponPorts)
-        .where(eq(gponPorts.locationId, data.id))
-        .all(),
-      db.select({ id: odpPoints.id }).from(odpPoints).where(eq(odpPoints.locationId, data.id)).all()
-    ]);
-
-    const portIds = portRows.map((r) => r.id);
-    const odpIds = odpRows.map((r) => r.id);
-
-    if (portIds.length === 0 && odpIds.length === 0) return { count: 0 };
-
-    const conditions = [
-      portIds.length > 0 ? inArray(subscribers.gponPortId, portIds) : undefined,
-      odpIds.length > 0 ? inArray(subscribers.odpPointId, odpIds) : undefined
-    ].filter(Boolean) as Parameters<typeof or>;
-
-    const count = await db.$count(subscribers, or(...conditions));
-    return { count };
-  });
+import {
+  getLocations,
+  createLocation,
+  updateLocationDetail as updateLocation,
+  removeLocation,
+  checkLocationInUse
+} from "#/servers/locations";
 
 type Location = Awaited<ReturnType<typeof getLocations>>[number];
 

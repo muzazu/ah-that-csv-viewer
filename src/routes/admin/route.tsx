@@ -3,7 +3,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "#/components/ui/s
 import { Separator } from "#/components/ui/separator";
 import { AppSidebar } from "#/components/admin/AppSidebar";
 import { authClient } from "#/lib/auth-client";
-import { getStoredAppSettings } from "#/lib/app-settings";
+import { getStoredAppSettings } from "#/servers/app-settings";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {

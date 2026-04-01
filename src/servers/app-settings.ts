@@ -1,3 +1,5 @@
+import { db } from "@/db";
+import { appSettings } from "@/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 
 export const DEFAULT_APP_NAME = "APP";
@@ -10,7 +12,6 @@ export type StoredAppSettings = {
 };
 
 export const getStoredAppSettings = createServerFn({ method: "GET" }).handler(async () => {
-  const [{ db }, { appSettings }] = await Promise.all([import("#/db"), import("#/db/schema")]);
   const settings = await db.select().from(appSettings).limit(1);
 
   return {
