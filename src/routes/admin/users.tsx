@@ -76,6 +76,13 @@ function UsersPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateUserValues) => {
+      const { data: response } = await authClient.isUsernameAvailable({
+        username: data.username
+      });
+
+      if (!response?.available) {
+        throw new Error("Username is already taken");
+      }
       const result = await authClient.admin.createUser({
         name: data.username,
         email: data.email,
@@ -302,7 +309,7 @@ function CreateUserDialog({
               control={control}
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="new-role">
+                  <SelectTrigger id="new-role" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
