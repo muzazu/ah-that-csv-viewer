@@ -10,6 +10,7 @@
     "build": "vp build",
     "preview": "vp preview",
     "test": "vp test run",
+    "start": "node .output/server/index.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

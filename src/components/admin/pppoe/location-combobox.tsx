@@ -6,7 +6,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList
-} from "@/components/ui/combobox";
+} from "#/components/ui/combobox";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 

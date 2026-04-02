@@ -67,6 +67,111 @@ vpx shadcn@latest add button
 - Prefer `vp` for install, dev, build, test, lint, and other common tasks. `vp` wraps the underlying package manager (pnpm in this repo) and ensures tools run with the expected configuration.
 - Keep secrets in `.env.local` and out of source control.
 
+**Deployment with Docker**
+
+This project includes a production-ready Docker setup with secure, minimal images and persistent SQLite storage.
+
+**Quick Start (Docker)**
+
+1. **Run setup script** (Linux only - installs Docker if needed and initializes `.env`):
+
+   ```bash
+   chmod +x setup.sh
+   ./setup.sh
+   ```
+
+2. **Build and run with Docker Compose:**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+   This will:
+   - Build the image with Node 25 builder and distroless runtime
+   - Create a named volume (`csv-viewer-data`) for SQLite persistence
+   - Start the server on `http://localhost:3000`
+   - Run migrations automatically on startup
+
+3. **Access the application:**
+   - Open http://localhost:3000 in your browser
+   - Complete the setup wizard to create an admin account
+   - Your app name, settings, and all subscriber data persist across container restarts
+
+**Manual Docker Run** (without Docker Compose):
+
+```bash
+# Build the image
+docker build -t csv-viewer .
+
+# Create a named volume for data persistence
+docker volume create csv-viewer-data
+
+# Run the container
+docker run -it --rm \
+  -v csv-viewer-data:/data \
+  --env-file .env \
+  -p 3000:3000 \
+  csv-viewer
+```
+
+**Environment Configuration**
+
+The setup script creates a `.env` file with secure defaults:
+
+- `DATABASE_URL` - Path to SQLite database (set to `/data/csv-viewer.db` for persistence)
+- `BETTER_AUTH_SECRET` - Auto-generated 32-byte secret for authentication
+- `BETTER_AUTH_URL` - Base URL for auth callbacks (default: `http://localhost:3000`)
+- `NODE_ENV` - Set to `production` in Docker (default: `development` for local dev)
+
+To override values, edit `.env` before `docker-compose up`.
+
+**Database & Persistence**
+
+- **SQLite Storage:** The database file is stored in a mounted volume at `/data/csv-viewer.db`
+- **Migrations:** Automatically applied at container startup via `drizzle-kit migrate`
+- **Data Persistence:** All user data (subscribers, settings, auth sessions) persist across container restarts
+- **No Data Loss:** Rebuilding or restarting the container with the same volume preserves all data
+- **Backup:** Copy the contents of the `csv-viewer-data` volume to back up your database:
+  ```bash
+  docker run --rm -v csv-viewer-data:/data -v $(pwd):/backup \
+    alpine cp -r /data /backup/csv-viewer-backup
+  ```
+
+**Migration Behavior**
+
+- Migrations run automatically when the container starts
+- New schema changes are applied without truncating tables
+- Existing data is preserved during schema updates
+- Migration logs are printed to container stderr during startup
+
+**Security Considerations**
+
+- **Non-root execution:** The container runs as a non-root user (`nonroot`) for minimal privilege
+- **Minimal image:** Distroless base image has no shell, package manager, or development tools
+- **Secrets:** Keep `.env` and `BETTER_AUTH_SECRET` safe; never commit these to version control
+- **Permissions:** Database files are readable/writable only by the container process
+
+**Health Checks**
+
+The container includes a health check that verifies the server is running:
+
+```bash
+docker ps  # Check STATUS column for "healthy"
+```
+
+To manually test:
+
+```bash
+curl http://localhost:3000
+```
+
+**Troubleshooting**
+
+- **Container exits immediately:** Check logs with `docker-compose logs csv-viewer` and verify `.env` is present and has `BETTER_AUTH_SECRET` set
+- **Port 3000 already in use:** Change port in `docker-compose.yml` (e.g., `"3001:3000"`)
+- **Permission denied on data volume:** The container needs `--chown=nonroot:nonroot` on mounted files
+- **Migrations fail:** Ensure `DATABASE_URL` points to a valid path (e.g., `/data/csv-viewer.db`)
+
 **Learn more**
 Visit the TanStack Start docs and TanStack Router docs for routing and server-function examples:
 

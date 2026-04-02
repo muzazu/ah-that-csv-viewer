@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { appSettings } from "@/db/schema";
+import { db } from "#/db";
+import { appSettings } from "#/db/schema";
 import { createServerFn } from "@tanstack/react-start";
 
 export const DEFAULT_APP_NAME = "APP";

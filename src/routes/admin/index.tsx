@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
 import { Users, Network, MapPin, Activity } from "lucide-react";
-import { getDashboardStats } from "@/servers/dashboard-stats";
+import { getDashboardStats } from "#/servers/dashboard-stats";
 
 export const Route = createFileRoute("/admin/")({
   loader: () => getDashboardStats(),

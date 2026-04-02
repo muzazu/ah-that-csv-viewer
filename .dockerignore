@@ -1,0 +1,56 @@
+# Git and version control
+.git
+.gitignore
+.github
+
+# Node/npm
+node_modules
+npm-debug.log
+pnpm-debug.log
+yarn-error.log
+
+# Build outputs (we rebuild in Docker)
+.output
+dist
+dist-ssr
+
+# IDE and editor files
+.vscode
+.vscode-server
+.idea
+*.swp
+*.swo
+*.swn
+.DS_Store
+.env
+.env.local
+
+# Testing
+coverage
+.nyc_output
+
+# Vite/development tools
+.vite-hooks
+.tanstack
+.vinxi
+.wrangler
+.nitro
+
+# Misc
+README.md
+LICENSE
+*.log
+.eslintrc*
+tsconfig.json
+
+# SQLite database files (these are runtime artifacts, not source)
+*.db
+*.db-shm
+*.db-wal
+
+# Drizzle studio config (development only)
+.drizzle
+
+# OS files
+Thumbs.db
+.cache

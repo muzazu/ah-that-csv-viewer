@@ -1,7 +1,7 @@
-import { db } from "@/db";
-import { locations } from "@/db/schema";
+import { db } from "#/db";
+import { locations } from "#/db/schema";
 import { createServerFn } from "@tanstack/react-start";
-import { ensureSession } from "@/servers/auth";
+import { ensureSession } from "#/servers/auth";
 import z from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 
