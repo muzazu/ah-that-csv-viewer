@@ -37,13 +37,36 @@ tty_read() {
   IFS= read -r "$varname" < /dev/tty || true
 }
 
+# ---- Git ------------------------------------------------------------------
+ensure_git() {
+  command -v git &> /dev/null && return 0
+
+  if is_windows_shell || is_wsl2; then
+    log_error "git is required — install it from https://git-scm.com/download/win then re-run."
+    exit 1
+  fi
+
+  log_info "Installing git..."
+  case "$(detect_package_manager)" in
+    apt) sudo apt-get install -y -qq git ;;
+    dnf) sudo dnf install -y -q git ;;
+    *)
+      log_error "Cannot install git automatically — install it manually and re-run."
+      exit 1
+      ;;
+  esac
+
+  command -v git &> /dev/null || { log_error "git install failed."; exit 1; }
+  log_success "git $(git --version | cut -d' ' -f3) installed."
+}
+
 # ---- Bootstrap: clone repo and re-exec ------------------------------------
 bootstrap_repo() {
   echo >&2
   log_info "CSV Viewer — bootstrapping installation"
   echo >&2
 
-  command -v git &> /dev/null || { log_error "git is required. Install git and re-run."; exit 1; }
+  ensure_git
 
   local default_dir="$HOME/csv-viewer"
   local install_dir
