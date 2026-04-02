@@ -1,5 +1,18 @@
 Welcome to the CSV Viewer (TanStack Start) app — a small React + TanStack Router project scaffolded with Vite+.
 
+**Quick Install (Docker — one command)**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/muzazu/ah-that-csv-viewer/main/setup.sh | bash
+```
+
+This clones the repo, installs Docker if needed, generates `.env`, and starts the app. Requires `git` and a Linux or WSL2 shell.
+
+> **Windows:** Open WSL2 or Git Bash and run the command above.  
+> Or install Docker Desktop first (`winget install Docker.DockerDesktop`), then clone and run `./setup.sh` manually.
+
+---
+
 **Prerequisites**
 
 - **Node.js**: lts (v24+) recommended (install via your platform package manager or nvm).
