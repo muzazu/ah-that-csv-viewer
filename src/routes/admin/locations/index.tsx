@@ -222,12 +222,16 @@ function LocationsPage() {
 
       {/* Pagination */}
       {pageCount > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="text-muted-foreground shrink-0">
             {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filteredRows.length)} of{" "}
             {filteredRows.length}
           </span>
+
           <div className="flex items-center gap-2">
+            <span className="text-muted-foreground shrink-0">
+              Page {page + 1} of {pageCount}
+            </span>
             <Button
               variant="outline"
               size="sm"
@@ -236,9 +240,6 @@ function LocationsPage() {
             >
               Previous
             </Button>
-            <span>
-              Page {page + 1} of {pageCount}
-            </span>
             <Button
               variant="outline"
               size="sm"
