@@ -178,9 +178,27 @@ To manually test:
 curl http://localhost:3000
 ```
 
+**Updating**
+
+To pull the latest release and rebuild without needing git:
+
+```bash
+./setup.sh update
+```
+
+This will:
+
+1. Download the latest source archive from GitHub
+2. Back up your `docker-compose.yml` → `docker-compose.yml.bak` (preserves any custom port/resource changes)
+3. Stop the running container
+4. Apply updated source files (`.env` and `data/` are never touched)
+5. Rebuild the image and restart the container
+
+> Your database, settings, and `.env` are fully preserved during updates.
+
 **Troubleshooting**
 
-- **Container exits immediately:** Check logs with `docker-compose logs csv-viewer` and verify `.env` is present and has `BETTER_AUTH_SECRET` set
+- **Container exits immediately:** Check logs with `docker compose logs csv-viewer` and verify `.env` is present and has `BETTER_AUTH_SECRET` set
 - **Port 3000 already in use:** Change port in `docker-compose.yml` (e.g., `"3001:3000"`)
 - **Permission denied on data volume:** The container needs `--chown=nonroot:nonroot` on mounted files
 - **Migrations fail:** Ensure `DATABASE_URL` points to a valid path (e.g., `/data/csv-viewer.db`)

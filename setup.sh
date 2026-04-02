@@ -7,13 +7,23 @@ set -euo pipefail
 #   curl -fsSL https://raw.githubusercontent.com/muzazu/ah-that-csv-viewer/main/setup.sh | bash
 #
 # Run inside the repo after cloning:
-#   ./setup.sh [--force]
+#   ./setup.sh [--force]   — initial setup
+#   ./setup.sh update      — pull latest release and rebuild
 #
 # Options:
 #   --force  Regenerate all .env values, overwriting existing ones
 
-FORCE="${1:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+FORCE=""
+SUBCOMMAND=""
+for _arg in "$@"; do
+  case "$_arg" in
+    update)   SUBCOMMAND="update" ;;
+    --force)  FORCE="--force" ;;
+    *)        echo -e "\033[1;33m[WARN]\033[0m Unknown argument: $_arg" >&2 ;;
+  esac
+done
 ENV_FILE="${SCRIPT_DIR}/.env"
 ENV_EXAMPLE="${SCRIPT_DIR}/.env.example"
 
@@ -270,8 +280,74 @@ EOF
   log_success ".env ready  (BETTER_AUTH_URL=${auth_url})"
 }
 
+# ---- Update (tarball-based, no git required) ------------------------------
+perform_update() {
+  echo >&2
+  log_info "CSV Viewer — updating to latest release"
+  echo >&2
+
+  if $IS_BOOTSTRAP; then
+    log_error "'update' must be run from inside your install directory, not piped from curl."
+    log_error "  cd /path/to/your/csv-viewer && ./setup.sh update"
+    exit 1
+  fi
+
+  if ! command -v docker &> /dev/null; then
+    log_error "Docker is required but not found. Run ./setup.sh first."
+    exit 1
+  fi
+
+  local tarball="/tmp/csv-viewer-update-$$.tar.gz"
+  local tmpdir="/tmp/csv-viewer-update-$$"
+  # GitHub archive subdir name follows the pattern: {reponame}-{branch}
+  local archive_subdir="ah-that-csv-viewer-main"
+
+  log_info "Downloading latest release..."
+  if ! curl -fsSL "${REPO_URL}/archive/refs/heads/main.tar.gz" -o "$tarball"; then
+    log_error "Download failed. Check your internet connection and try again."
+    exit 1
+  fi
+
+  mkdir -p "$tmpdir"
+  log_info "Extracting..."
+  tar -xzf "$tarball" -C "$tmpdir"
+
+  if [[ ! -d "$tmpdir/$archive_subdir" ]]; then
+    log_error "Unexpected archive layout — expected subdirectory: $archive_subdir"
+    rm -rf "$tarball" "$tmpdir"
+    exit 1
+  fi
+
+  # Back up docker-compose.yml in case the user has customized it
+  if [[ -f "${SCRIPT_DIR}/docker-compose.yml" ]]; then
+    cp "${SCRIPT_DIR}/docker-compose.yml" "${SCRIPT_DIR}/docker-compose.yml.bak"
+    log_info "Backed up docker-compose.yml → docker-compose.yml.bak"
+  fi
+
+  log_info "Stopping containers..."
+  (cd "$SCRIPT_DIR" && docker compose down)
+
+  log_info "Applying update files..."
+  # Copies all source files from the tarball. .env and data/ are never in the
+  # tarball (gitignored / bind-mount runtime data) so they are preserved.
+  cp -rT "$tmpdir/$archive_subdir" "$SCRIPT_DIR"
+
+  rm -rf "$tarball" "$tmpdir"
+
+  log_success "Files updated."
+  echo >&2
+  log_info "Rebuilding and restarting..."
+  (cd "$SCRIPT_DIR" && docker compose up --build -d)
+  echo >&2
+  log_success "Update complete."
+  log_info "Open http://localhost:3000 in your browser."
+  echo >&2
+}
+
 # ---- Entry point ----------------------------------------------------------
 main() {
+  [[ "$SUBCOMMAND" == "update" ]] && { perform_update; return; }
+
   echo >&2
   log_info "CSV Viewer Setup"
   echo >&2
