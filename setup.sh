@@ -289,6 +289,10 @@ main() {
   initialize_env
   echo >&2
 
+  log_info "Stopping any existing containers..."
+  docker compose down
+  echo >&2
+  
   log_success "Setup complete — starting app..."
   docker compose up --build -d
   echo >&2
