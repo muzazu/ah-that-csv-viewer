@@ -42,13 +42,24 @@ function LoginPage() {
     try {
       const result = await authClient.signIn.username({
         username: data.username,
-        password: data.password
+        password: data.password,
+        rememberMe: true
       });
       if (result.error) {
-        setError("root", { message: result.error.message ?? "Invalid username or password." });
-      } else {
-        await router.navigate({ to: "/admin" });
+        const resultEmail = await authClient.signIn.email({
+          email: data.username,
+          password: data.password,
+          rememberMe: true
+        });
+        if (resultEmail.error) {
+          setError("root", {
+            message: resultEmail.error.message ?? "Invalid username or password."
+          });
+          return;
+        }
       }
+
+      await router.navigate({ to: "/admin" });
     } catch {
       setError("root", { message: "An unexpected error occurred. Please try again." });
     }
