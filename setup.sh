@@ -324,9 +324,6 @@ perform_update() {
     log_info "Backed up docker-compose.yml → docker-compose.yml.bak"
   fi
 
-  log_info "Stopping containers..."
-  (cd "$SCRIPT_DIR" && docker compose down)
-
   log_info "Applying update files..."
   # Copies all source files from the tarball. .env and data/ are never in the
   # tarball (gitignored / bind-mount runtime data) so they are preserved.
@@ -363,10 +360,6 @@ main() {
   echo >&2
 
   initialize_env
-  echo >&2
-
-  log_info "Stopping any existing containers..."
-  docker compose down
   echo >&2
   
   log_success "Setup complete — starting app..."
