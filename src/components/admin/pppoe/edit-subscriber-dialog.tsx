@@ -10,11 +10,12 @@ import { Switch } from "#/components/ui/switch";
 import { LocationCombobox } from "./location-combobox";
 import type { LocationOption } from "./location-combobox";
 import type { SubscriberRow } from "./columns";
+import { Item, ItemActions, ItemContent } from "#/components/ui/item";
 
 interface EditForm {
   name: string;
   pppoeUsername: string;
-  location: string;
+  location: LocationOption | null;
   gponPort: string;
   odpPoint: string;
   ipAddress: string;
@@ -68,7 +69,7 @@ export function EditSubscriberDialog({
     reset({
       name: subscriber.name,
       pppoeUsername: subscriber.pppoeUsername,
-      location: "",
+      location: subscriber.gponPort?.location ?? null,
       gponPort: subscriber.gponPort?.portIdentifier ?? "",
       odpPoint: subscriber.odpPoint?.name ?? "",
       ipAddress: subscriber.ipAddress ?? "",
@@ -82,10 +83,14 @@ export function EditSubscriberDialog({
 
   async function onSubmit(values: EditForm) {
     if (!subscriber) return;
+
+    const { location, ...rest } = values;
+    const payload = { id: subscriber.id, location: location?.name || undefined, ...rest };
+
     const res = await fetch("/api/pppoe/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: subscriber.id, ...values })
+      body: JSON.stringify(payload)
     });
     if (!res.ok) {
       const body = (await res.json()) as { error?: string };
@@ -128,7 +133,9 @@ export function EditSubscriberDialog({
                 render={({ field }) => (
                   <LocationCombobox
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(v) => {
+                      field.onChange(v ?? { id: -1, name: "", type: "OLT" });
+                    }}
                     locations={locations}
                   />
                 )}
@@ -174,18 +181,25 @@ export function EditSubscriberDialog({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Controller
-              control={control}
-              name="enabled"
-              render={({ field }) => (
-                <Switch id="e-enabled" checked={field.value} onCheckedChange={field.onChange} />
-              )}
-            />
-            <Label htmlFor="e-enabled" className="cursor-pointer">
-              Active subscriber
-            </Label>
-          </div>
+          <Item variant="outline">
+            <ItemContent>
+              <Label htmlFor="e-enabled" className="cursor-pointer">
+                Active subscriber
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Indicates whether this subscriber is active.
+              </p>
+            </ItemContent>
+            <ItemActions>
+              <Controller
+                control={control}
+                name="enabled"
+                render={({ field }) => (
+                  <Switch id="e-enabled" checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+            </ItemActions>
+          </Item>
 
           {errors.root && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
